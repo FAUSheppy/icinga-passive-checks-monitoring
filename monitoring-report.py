@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import subprocess as sp
+import socket
 from multiprocessing import Process
 import sys
 import argparse
@@ -60,7 +61,7 @@ def executeConfig(hostname, filename, runAsync, noSudo):
         task.join()
 
 parser = argparse.ArgumentParser(description='Manage icinga/nsca-ng reports.')
-parser.add_argument('hostname',metavar="HOSTNAME", help='Icinga master server')
+parser.add_argument('-H', '--hostname', help='local identity/hostname)')
 parser.add_argument('-c', '--config', dest='configurationFile', default="monitoring.conf", help='Configuration file (default: ./monitoring.conf)')
 parser.add_argument('-a', '--async',  dest='async', action="store_const", const=True, default=False, 
                 help='Run checks asynchronous')
@@ -70,7 +71,10 @@ parser.add_argument('-u', '--ignore-user', dest='ignoreUser', action="store_cons
 
 if __name__ == '__main__':
     parser = parser.parse_args()
-    hostname = parser.hostname
+    if not parser.hostname:
+        hostname = socket.gethostname()
+    else:
+        hostname = parser.hostname
     filename = parser.configurationFile
     runAsync = parser.async
     noSudo   = parser.ignoreUser

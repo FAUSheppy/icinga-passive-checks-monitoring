@@ -3,7 +3,7 @@ Please refer to [UPCOMING] for a detailed how to.
 
 ## Script Parameters
 
-    hostname        Icinga master server
+    hostname        local identity (usually hostname)
     -c, --config    configuration file
     -a, --async     execute all checks paralelle
     -h, --help      show help
