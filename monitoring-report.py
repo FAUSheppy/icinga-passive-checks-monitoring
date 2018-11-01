@@ -2,6 +2,7 @@
 import subprocess as sp
 from multiprocessing import Process
 import sys
+import argparse
 import os
 import pwd
 import grp
@@ -19,8 +20,10 @@ def dropPivileges(uid_name, gid_name=None):
 def splitCMD(cmd):
     return list(filter(lambda a: a,cmd.strip("\n").split(" ")))
 
-def executeAndSubmit(user, serviceName, cmd):
-    dropPivileges(user)
+def executeAndSubmit(user, serviceName, cmd, noSudo):
+    if not noSudo:
+        dropPivileges(user)
+
     message = ""
     # run monitoring command
     try:
@@ -33,25 +36,42 @@ def executeAndSubmit(user, serviceName, cmd):
     p = sp.Popen(['/usr/sbin/send_nsca'], stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
     stdout = p.communicate(input=bytes(message,"utf-8"))
 
-def executeAndSubmitAsync(user, serviceName, cmd):
-    p = Process(target=executeAndSubmit, args=(user,serviceName, cmd,))
+def executeAndSubmitAsync(user, serviceName, cmd, noSudo):
+    p = Process(target=executeAndSubmit, args=(user,serviceName, cmd, noSudo,))
     p.start()
     return p
 
-def executeConfig(hostname, filename):
+def executeConfig(hostname, filename, runAsync, noSudo):
     asyncTasks = []
     # parse config and start tasks
     with open(filename,"r") as f:
         for line in f:
             user, serviceName, cmd = line.split("\t")
-            p = executeAndSubmitAsync(user, serviceName, cmd)
-            asyncTasks += [p]
+            p = executeAndSubmitAsync(user, serviceName, cmd, noSudo)
 
-    # wait for all processes to finish
+            # run async or join directly
+            if runAsync:
+                asyncTasks += [p]
+            else:
+                p.join()
+
+    # wait for all processes to finish if was async
     for task in asyncTasks:
         task.join()
 
+parser = argparse.ArgumentParser(description='Manage icinga/nsca-ng reports.')
+parser.add_argument('hostname',metavar="HOSTNAME", help='Icinga master server')
+parser.add_argument('-c', '--config', dest='configurationFile', default="monitoring.conf", help='Configuration file (default: ./monitoring.conf)')
+parser.add_argument('-a', '--async',  dest='async', action="store_const", const=True, default=False, 
+                help='Run checks asynchronous')
+parser.add_argument('-u', '--ignore-user', dest='ignoreUser', action="store_const", const=True, default=False, 
+                help='Run as current user and ignore user column in config file')
+
+
 if __name__ == '__main__':
-    hostname = "atlantishq.de"
-    filename = "monitoring.conf"
-    executeConfig(hostname, filename)
+    parser = parser.parse_args()
+    hostname = parser.hostname
+    filename = parser.configurationFile
+    runAsync = parser.async
+    noSudo  = parser.ignoreUser
+    executeConfig(hostname, filename, runAsync, noSudo)
