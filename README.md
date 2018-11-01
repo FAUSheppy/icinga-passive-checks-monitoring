@@ -3,9 +3,9 @@ Please refer to [UPCOMING] for a detailed how to.
 
 ## Script Parameters
 
-    -H, --host      Icinga master server
+    hostname        Icinga master server
     -c, --config    configuration file
-    -a, --async     execute all checks asynchronous
+    -a, --async     execute all checks paralelle
     -h, --help      show help
 
 ## Configuration file
