@@ -73,5 +73,5 @@ if __name__ == '__main__':
     hostname = parser.hostname
     filename = parser.configurationFile
     runAsync = parser.async
-    noSudo  = parser.ignoreUser
+    noSudo   = parser.ignoreUser
     executeConfig(hostname, filename, runAsync, noSudo)
