@@ -1,5 +1,5 @@
 ## Setup
-Please refer to [UPCOMING] for a detailed how to.
+Please refer to [https://blog.atlantishq.de/post/monitoring-icinga-1/](my blog) for a detailed how to.
 
 ## Script Parameters
 
