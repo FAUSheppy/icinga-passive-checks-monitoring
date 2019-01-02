@@ -1,7 +1,7 @@
 #!/usr/bin/python3
+from   multiprocessing import Process
 import subprocess as sp
 import socket
-from multiprocessing import Process
 import sys
 import argparse
 import os
