@@ -8,6 +8,8 @@ import os
 import pwd
 import grp
 
+nscaConfig = ""
+
 def dropPivileges(uid_name, gid_name=None):
     if not gid_name:
         gid_name = "nogroup"
@@ -36,7 +38,11 @@ def executeAndSubmit(user, serviceName, cmd, noSudo):
         print("{} command not found!".format(splitCMD(cmd)[0]),file=sys.stderr)
 
     # submitt the results
-    p = sp.Popen(['/usr/sbin/send_nsca'], stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
+    if nscaConfig:
+        nscaCMD = '/usr/sbin/send_nsca -c {}'.format(nscaConfig)
+    else:
+        nscaCMD = '/usr/sbin/send_nsca'
+    p = sp.Popen([nscaCMD], stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
     stdout = p.communicate(input=bytes(message,"utf-8"))
     if p.returncode != 0:
         raise RuntimeError("Execution of send_nsca failed")
@@ -68,6 +74,7 @@ def executeConfig(hostname, filename, runAsync, noSudo):
 
 parser = argparse.ArgumentParser(description='Manage icinga/nsca-ng reports.')
 parser.add_argument('-H', '--hostname', help='local identity/hostname)')
+parser.add_argument('--nsca-config', help='send-nsca configuration file (default set by nsca-package)')
 parser.add_argument('-c', '--config', dest='configurationFile', default="monitoring.conf", help='Configuration file (default: ./monitoring.conf)')
 parser.add_argument('-a', '--async',  dest='async', action="store_const", const=True, default=False, 
                 help='Run checks asynchronous')
@@ -81,6 +88,8 @@ if __name__ == '__main__':
         hostname = socket.gethostname()
     else:
         hostname = parser.hostname
+
+    nscaConfig = args.nsca_config
     filename = parser.configurationFile
     runAsync = parser.async
     noSudo   = parser.ignoreUser
