@@ -8,7 +8,8 @@ import os
 import pwd
 import grp
 
-nscaConfig = ""
+nscaConfig   = ""
+sendNscaPath = "/usr/sbin/send_nsca" 
 
 def dropPivileges(uid_name, gid_name=None):
     if not gid_name:
@@ -32,20 +33,20 @@ def executeAndSubmit(user, serviceName, cmd, noSudo):
     try:
         subP = sp.run(splitCMD(cmd))
         if subP.returncode != 0:
-            raise RuntimeError("Execution of '{}'failed".format(cmd))
+            raise RuntimeError("'{}' failed.".format(cmd))
         message = "{}\t{}\t{}\t{}\n".format(hostname, serviceName, subP.returncode, subP.stdout)
     except FileNotFoundError:
         print("{} command not found!".format(splitCMD(cmd)[0]),file=sys.stderr)
 
     # submitt the results
     if nscaConfig:
-        nscaCMD = '/usr/sbin/send_nsca -c {}'.format(nscaConfig)
+        nscaCMD = [sendNscaPath,'-c', nscaConfig]
     else:
-        nscaCMD = '/usr/sbin/send_nsca'
-    p = sp.Popen([nscaCMD], stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
+        nscaCMD = [sendNscaPath]
+    p = sp.Popen(nscaCMD, stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
     stdout = p.communicate(input=bytes(message,"utf-8"))
     if p.returncode != 0:
-        raise RuntimeError("Execution of send_nsca failed")
+        raise RuntimeError("Execution of send_nsca failed - {}".format(stdout))
 
 
 def executeAndSubmitAsync(user, serviceName, cmd, noSudo):
@@ -75,6 +76,7 @@ def executeConfig(hostname, filename, runAsync, noSudo):
 parser = argparse.ArgumentParser(description='Manage icinga/nsca-ng reports.')
 parser.add_argument('-H', '--hostname', help='local identity/hostname)')
 parser.add_argument('--nsca-config', help='send-nsca configuration file (default set by nsca-package)')
+parser.add_argument('--nsca-bin', help='send-nsca executable (default: /usr/sbin/send_nsca)')
 parser.add_argument('-c', '--config', dest='configurationFile', default="monitoring.conf", help='Configuration file (default: ./monitoring.conf)')
 parser.add_argument('-a', '--async',  dest='runAsync', action="store_const", const=True, default=False, 
                 help='Run checks asynchronous')
@@ -89,8 +91,9 @@ if __name__ == '__main__':
     else:
         hostname = args.hostname
 
-    nscaConfig = args.nsca_config
-    filename   = args.configurationFile
-    noSudo     = args.ignoreUser
+    nscaConfig   = args.nsca_config
+    sendNscaPath = args.nsca_bin
+    filename     = args.configurationFile
+    noSudo       = args.ignoreUser
 
     executeConfig(hostname, filename, args.runAsync, noSudo)
