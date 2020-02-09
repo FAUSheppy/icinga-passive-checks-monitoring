@@ -1,7 +1,7 @@
 #!/usr/bin/python3
+from   multiprocessing import Process
 import subprocess as sp
 import socket
-from multiprocessing import Process
 import sys
 import argparse
 import os
@@ -30,6 +30,8 @@ def executeAndSubmit(user, serviceName, cmd, noSudo):
     # run monitoring command
     try:
         subP = sp.run(splitCMD(cmd))
+        if subP.returncode != 0:
+            raise RuntimeError("Execution of '{}'failed".format(cmd))
         message = "{}\t{}\t{}\t{}\n".format(hostname, serviceName, subP.returncode, subP.stdout)
     except FileNotFoundError:
         print("{} command not found!".format(splitCMD(cmd)[0]),file=sys.stderr)
@@ -37,6 +39,9 @@ def executeAndSubmit(user, serviceName, cmd, noSudo):
     # submitt the results
     p = sp.Popen(['/usr/sbin/send_nsca'], stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
     stdout = p.communicate(input=bytes(message,"utf-8"))
+    if p.returncode != 0:
+        raise RuntimeError("Execution of send_nsca failed")
+
 
 def executeAndSubmitAsync(user, serviceName, cmd, noSudo):
     p = Process(target=executeAndSubmit, args=(user,serviceName, cmd, noSudo,))
