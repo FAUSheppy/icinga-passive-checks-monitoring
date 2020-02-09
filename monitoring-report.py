@@ -76,21 +76,21 @@ parser = argparse.ArgumentParser(description='Manage icinga/nsca-ng reports.')
 parser.add_argument('-H', '--hostname', help='local identity/hostname)')
 parser.add_argument('--nsca-config', help='send-nsca configuration file (default set by nsca-package)')
 parser.add_argument('-c', '--config', dest='configurationFile', default="monitoring.conf", help='Configuration file (default: ./monitoring.conf)')
-parser.add_argument('-a', '--async',  dest='async', action="store_const", const=True, default=False, 
+parser.add_argument('-a', '--async',  dest='runAsync', action="store_const", const=True, default=False, 
                 help='Run checks asynchronous')
 parser.add_argument('-u', '--ignore-user', dest='ignoreUser', action="store_const", const=True, default=False, 
                 help='Run as current user and ignore user column in config file')
 
 
 if __name__ == '__main__':
-    parser = parser.parse_args()
-    if not parser.hostname:
+    args = parser.parse_args()
+    if not args.hostname:
         hostname = socket.gethostname()
     else:
-        hostname = parser.hostname
+        hostname = args.hostname
 
     nscaConfig = args.nsca_config
-    filename = parser.configurationFile
-    runAsync = parser.async
-    noSudo   = parser.ignoreUser
-    executeConfig(hostname, filename, runAsync, noSudo)
+    filename   = args.configurationFile
+    noSudo     = args.ignoreUser
+
+    executeConfig(hostname, filename, args.runAsync, noSudo)
