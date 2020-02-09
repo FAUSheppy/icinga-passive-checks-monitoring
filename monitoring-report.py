@@ -7,7 +7,6 @@ import argparse
 import os
 import pwd
 import grp
-import re
 
 def dropPivileges(uid_name, gid_name=None):
     if not gid_name:
@@ -54,7 +53,7 @@ def executeConfig(hostname, filename, runAsync, noSudo):
     with open(filename,"r") as f:
         for line in f:
             splitted = list(filter(lambda x: x, line.split("\t")))
-            user, serviceName, cmd = line
+            user, serviceName, cmd = splitted
             p = executeAndSubmitAsync(user, serviceName, cmd, noSudo)
 
             # run async or join directly
