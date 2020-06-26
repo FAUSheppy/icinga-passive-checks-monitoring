@@ -29,12 +29,13 @@ def executeAndSubmit(user, serviceName, cmd, noSudo):
         dropPivileges(user)
 
     message = ""
+    cmd = splitCMD(cmd)
     # run monitoring command
     try:
-        subP = sp.run(splitCMD(cmd))
+        subP = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
         if subP.returncode != 0:
-            raise RuntimeError("'{}' failed.".format(cmd))
-        message = "{}\t{}\t{}\t{}\n".format(hostname, serviceName, subP.returncode, subP.stdout)
+            raise RuntimeError("'{}' failed: {}.".format(cmd, subP.stderr))
+        message = "{}\t{}\t{}\t{}\n".format(hostname, serviceName, subP.returncode, subP.stdout.decode("utf-8"))
     except FileNotFoundError:
         print("{} command not found!".format(splitCMD(cmd)[0]),file=sys.stderr)
 
