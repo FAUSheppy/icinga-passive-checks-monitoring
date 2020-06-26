@@ -76,7 +76,7 @@ def executeConfig(hostname, filename, runAsync, noSudo):
 parser = argparse.ArgumentParser(description='Manage icinga/nsca-ng reports.')
 parser.add_argument('-H', '--hostname', help='local identity/hostname)')
 parser.add_argument('--nsca-config', help='send-nsca configuration file (default set by nsca-package)')
-parser.add_argument('--nsca-bin', help='send-nsca executable (default: /usr/sbin/send_nsca)')
+parser.add_argument('--nsca-bin', default="/usr/sbin/send_nsca", help='send-nsca executable (default: /usr/sbin/send_nsca)')
 parser.add_argument('-c', '--config', dest='configurationFile', default="monitoring.conf", help='Configuration file (default: ./monitoring.conf)')
 parser.add_argument('-a', '--async',  dest='runAsync', action="store_const", const=True, default=False, 
                 help='Run checks asynchronous')
