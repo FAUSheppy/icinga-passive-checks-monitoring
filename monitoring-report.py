@@ -1,6 +1,7 @@
 #!/usr/bin/python3
-from   multiprocessing import Process
-import subprocess as sp
+
+import multiprocessing
+import subprocess
 import socket
 import sys
 import argparse
@@ -8,8 +9,9 @@ import os
 import pwd
 import grp
 
-nscaConfig   = ""
-sendNscaPath = "/usr/sbin/send_nsca" 
+import requests
+
+ENCODING = "UTF-8"
 
 def dropPivileges(uid_name, gid_name=None):
     if not gid_name:
@@ -24,47 +26,67 @@ def dropPivileges(uid_name, gid_name=None):
 def splitCMD(cmd):
     return list(filter(lambda a: a,cmd.strip("\n").split(" ")))
 
-def executeAndSubmit(user, serviceName, cmd, noSudo):
-    if not noSudo:
+def executeAndSubmit(hostnameIdent, user, args):
+
+    if not args.no_sudo:
         dropPivileges(user)
 
     message = ""
     cmd = splitCMD(cmd)
+
     # run monitoring command
     try:
-        subP = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
-        message = "{}\t{}\t{}\t{}\n".format(hostname, serviceName, subP.returncode,
-                                                subP.stdout.decode("utf-8"))
+        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding=ENCODING)
+        message = "{}\t{}\t{}\t{}\n".format(hostnameIdent, serviceName, p.returncode, p.stdout)
     except FileNotFoundError:
-        print("{} command not found!".format(splitCMD(cmd)[0]),file=sys.stderr)
+        print("{} command not found!".format(splitCMD(cmd)[0]), file=sys.stderr)
 
     # submitt the results
-    if nscaConfig:
-        nscaCMD = [sendNscaPath,'-c', nscaConfig]
+    if args.gateway:
+
+        if p.returncode == 0:
+            status = "OK"
+            info   = p.stdout
+        else:
+            status = "CRITICAL"
+            info   = p.stderr
+
+        r = requests.post(args.gateway, json={ "service" : args.hostname,
+                "token" : args.token, "status" : status, "info" : info }
+        r.raise_for_status()
+
     else:
-        nscaCMD = [sendNscaPath]
-    p = sp.Popen(nscaCMD, stdout=sp.PIPE, stdin=sp.PIPE, stderr=sp.PIPE)
-    stdout = p.communicate(input=bytes(message,"utf-8"))
-    if p.returncode != 0:
-        raise RuntimeError("Execution of send_nsca failed - {}".format(stdout))
+        if args.nsca_config:
+            nscaCMD = [args.nsca_bin, '-c', args.nsca_config]
+        else:
+            nscaCMD = [args.nsca_bin]
+
+        nscaProcess = sp.Popen(nscaCMD, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        stdout = nscaProcess.communicate(input=bytes(message, ENCODING))
+        if nscaProcess.returncode != 0:
+            raise RuntimeError("Execution of send_nsca failed - {}".format(stdout))
 
 
-def executeAndSubmitAsync(user, serviceName, cmd, noSudo):
-    p = Process(target=executeAndSubmit, args=(user,serviceName, cmd, noSudo,))
+def executeAndSubmitAsync(user, service, cmd, sudo):
+    p = Process(target=executeAndSubmit, args=(user, service, cmd, no_sudo,))
     p.start()
     return p
 
-def executeConfig(hostname, filename, runAsync, noSudo):
+def executeConfig(hostnameIdent, args):
+
     asyncTasks = []
+
     # parse config and start tasks
-    with open(filename,"r") as f:
+    with open(args.filename, "r") as f:
+
         for line in f:
-            splitted = list(filter(lambda x: x, line.split("\t")))
-            user, serviceName, cmd = splitted
-            p = executeAndSubmitAsync(user, serviceName, cmd, noSudo)
+
+            # split config #
+            user, serviceName, cmd = list(filter(lambda x: x, line.split("\t")))
+            p = executeAndSubmitAsync(user, service, cmd, not args.no_sudo)
 
             # run async or join directly
-            if runAsync:
+            if args.async:
                 asyncTasks += [p]
             else:
                 p.join()
@@ -84,10 +106,9 @@ if __name__ == '__main__':
                     help='send-nsca executable (default: /usr/sbin/send_nsca)')
     parser.add_argument('-c', '--config', dest='configurationFile', default="monitoring.conf",
                     help='Configuration file (default: ./monitoring.conf)')
-    parser.add_argument('-a', '--async',  dest='runAsync', action="store_const", 
-                    const=True, default=False, help='Run checks asynchronous')
-    parser.add_argument('-u', '--ignore-user', dest='ignoreUser',
-                    action="store_const", const=True, default=False, 
+    parser.add_argument('-a', '--async', action="store_const", const=True, default=False,
+                    help='Run checks asynchronous')
+    parser.add_argument('-u', '--ignore-user', action="store_const", const=True, default=False, 
                     help='Run as current user and ignore user column in config file')
 
     parser.add_argument('-x', '--gateway', help='If set, use an async icinga checks gateway')
@@ -99,9 +120,4 @@ if __name__ == '__main__':
     else:
         hostname = args.hostname
 
-    nscaConfig   = args.nsca_config
-    sendNscaPath = args.nsca_bin
-    filename     = args.configurationFile
-    noSudo       = args.ignoreUser
-
-    executeConfig(hostname, filename, args.runAsync, noSudo)
+    executeConfig(hostnameIdent, args)
