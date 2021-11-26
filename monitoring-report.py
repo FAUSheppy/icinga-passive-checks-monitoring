@@ -33,7 +33,8 @@ def executeAndSubmit(user, serviceName, cmd, noSudo):
     # run monitoring command
     try:
         subP = sp.run(cmd, stdout=sp.PIPE, stderr=sp.PIPE)
-        message = "{}\t{}\t{}\t{}\n".format(hostname, serviceName, subP.returncode, subP.stdout.decode("utf-8"))
+        message = "{}\t{}\t{}\t{}\n".format(hostname, serviceName, subP.returncode,
+                                                subP.stdout.decode("utf-8"))
     except FileNotFoundError:
         print("{} command not found!".format(splitCMD(cmd)[0]),file=sys.stderr)
 
@@ -72,18 +73,26 @@ def executeConfig(hostname, filename, runAsync, noSudo):
     for task in asyncTasks:
         task.join()
 
-parser = argparse.ArgumentParser(description='Manage icinga/nsca-ng reports.')
-parser.add_argument('-H', '--hostname', help='local identity/hostname)')
-parser.add_argument('--nsca-config', help='send-nsca configuration file (default set by nsca-package)')
-parser.add_argument('--nsca-bin', default="/usr/sbin/send_nsca", help='send-nsca executable (default: /usr/sbin/send_nsca)')
-parser.add_argument('-c', '--config', dest='configurationFile', default="monitoring.conf", help='Configuration file (default: ./monitoring.conf)')
-parser.add_argument('-a', '--async',  dest='runAsync', action="store_const", const=True, default=False, 
-                help='Run checks asynchronous')
-parser.add_argument('-u', '--ignore-user', dest='ignoreUser', action="store_const", const=True, default=False, 
-                help='Run as current user and ignore user column in config file')
-
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='Icinga passive checks and curl report-ins.')
+    parser.add_argument('-H', '--hostname', help='Local Identity (often hostname)')
+    parser.add_argument('--nsca-config', 
+                    help='send-nsca configuration file (default set by nsca-package)')
+    parser.add_argument('--nsca-bin', default="/usr/sbin/send_nsca",
+                    help='send-nsca executable (default: /usr/sbin/send_nsca)')
+    parser.add_argument('-c', '--config', dest='configurationFile', default="monitoring.conf",
+                    help='Configuration file (default: ./monitoring.conf)')
+    parser.add_argument('-a', '--async',  dest='runAsync', action="store_const", 
+                    const=True, default=False, help='Run checks asynchronous')
+    parser.add_argument('-u', '--ignore-user', dest='ignoreUser',
+                    action="store_const", const=True, default=False, 
+                    help='Run as current user and ignore user column in config file')
+
+    parser.add_argument('-x', '--gateway', help='If set, use an async icinga checks gateway')
+    parser.add_argument('-t', '--gateway-token', help='Token to use with the gateway')
+
     args = parser.parse_args()
     if not args.hostname:
         hostname = socket.gethostname()
