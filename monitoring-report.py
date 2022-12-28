@@ -7,6 +7,7 @@ import argparse
 import os
 import pwd
 import grp
+import re
 
 nscaConfig   = ""
 sendNscaPath = "/usr/sbin/send_nsca" 
@@ -59,7 +60,7 @@ def executeConfig(hostname, filename, runAsync, noSudo):
     # parse config and start tasks
     with open(filename,"r") as f:
         for line in f:
-            splitted = list(filter(lambda x: x, line.split("\t")))
+            splitted = list(filter(lambda x: x, re.split(r'\s{2,}|\t')))
             user, serviceName, cmd = splitted
             p = executeAndSubmitAsync(user, serviceName, cmd, noSudo)
 
