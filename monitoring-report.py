@@ -60,6 +60,8 @@ def executeConfig(hostname, filename, runAsync, noSudo):
     # parse config and start tasks
     with open(filename,"r") as f:
         for line in f:
+            if not line or line.startswith("#"):
+                continue
             splitted = list(filter(lambda x: x, re.split(r'\s{2,}|\t')))
             user, serviceName, cmd = splitted
             p = executeAndSubmitAsync(user, serviceName, cmd, noSudo)
