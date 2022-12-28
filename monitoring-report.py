@@ -62,7 +62,7 @@ def executeConfig(hostname, filename, runAsync, noSudo):
         for line in f:
             if not line or line.startswith("#"):
                 continue
-            splitted = list(filter(lambda x: x, re.split(r'\s{2,}|\t')))
+            splitted = list(filter(lambda x: x, re.split(r'\s{2,}|\t', line)))
             user, serviceName, cmd = splitted
             p = executeAndSubmitAsync(user, serviceName, cmd, noSudo)
 
